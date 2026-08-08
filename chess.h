@@ -60,5 +60,15 @@ void print_chess_board_on_console(chess_t* ch);
 void clear_console(void);
 
 
+/* UI States and drawing */
+typedef enum {
+    APP_STATE_MENU = 0,
+    APP_STATE_PLAY,
+    APP_STATE_PAUSE,
+    APP_STATE_GAMEOVER
+} app_state_t;
+
+void draw_text(const char* text, int x, int y, int scale, SDL_Renderer* renderer);
+void draw_ui_overlay(app_state_t state, game_status_t game_status, bool white_turn, SDL_Renderer* renderer);
 
 #endif

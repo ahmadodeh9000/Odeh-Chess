@@ -86,7 +86,7 @@ static void draw_selection_highlight(SDL_Renderer *renderer,
     }
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
 
 
@@ -141,29 +141,16 @@ int main(void)
 
 
     bool is_game_running = true;
-    bool game_over = false;
+    app_state_t app_state = APP_STATE_MENU;
     bool piece_selected = false;
-
     bool white_turn = true;
-
     int selected_x = -1;
     int selected_y = -1;
-
     SDL_Event event;
 
-
-
     print_chess_board_on_console(chess_game);
-
-    game_status_t initial_status =
-        get_game_status(chess_game, white_turn);
-
-    print_status(initial_status, white_turn);
-
-    if (initial_status == GAME_CHECKMATE ||
-        initial_status == GAME_STALEMATE) {
-        game_over = true;
-    }
+    game_status_t current_status = get_game_status(chess_game, white_turn);
+    print_status(current_status, white_turn);
 
 
     while (is_game_running) {
@@ -178,22 +165,39 @@ int main(void)
                 continue;
             }
 
-            /* Escape quits the game. */
+            /* Escape toggles pause or quits. */
             if (event.type == SDL_KEYDOWN &&
                 event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-
-                is_game_running = false;
-                continue;
-            }
-
-            /* Don't accept game input after the game ends. */
-            if (game_over) {
+                
+                if (app_state == APP_STATE_PLAY) {
+                    app_state = APP_STATE_PAUSE;
+                } else if (app_state == APP_STATE_PAUSE) {
+                    app_state = APP_STATE_PLAY;
+                } else {
+                    is_game_running = false;
+                }
                 continue;
             }
 
             /* Only handle left mouse button. */
             if (event.type == SDL_MOUSEBUTTONDOWN &&
                 event.button.button == SDL_BUTTON_LEFT) {
+
+                if (app_state == APP_STATE_MENU || app_state == APP_STATE_GAMEOVER) {
+                    free(chess_game);
+                    chess_game = init_chess_board();
+                    white_turn = true;
+                    piece_selected = false;
+                    selected_x = -1;
+                    selected_y = -1;
+                    app_state = APP_STATE_PLAY;
+                    current_status = get_game_status(chess_game, white_turn);
+                    continue;
+                }
+
+                if (app_state != APP_STATE_PLAY) {
+                    continue;
+                }
 
                 int x;
                 int y;
@@ -206,24 +210,17 @@ int main(void)
                     continue;
                 }
 
-
                 if (!piece_selected) {
-
                     selected_x = x;
                     selected_y = y;
-
                     piece_selected = true;
                 }
-
                 else if (x == selected_x && y == selected_y) {
-
                     piece_selected = false;
                     selected_x = -1;
                     selected_y = -1;
                 }
-
                 else {
-
                     bool move_successful = try_move_piece(
                         chess_game,
                         selected_x,
@@ -241,22 +238,16 @@ int main(void)
                         continue;
                     }
 
-
-
                     white_turn = !white_turn;
-
                     clear_console();
                     print_chess_board_on_console(chess_game);
 
-                    game_status_t status =
-                        get_game_status(chess_game, white_turn);
+                    current_status = get_game_status(chess_game, white_turn);
+                    print_status(current_status, white_turn);
 
-                    print_status(status, white_turn);
-
-                    if (status == GAME_CHECKMATE ||
-                        status == GAME_STALEMATE) {
-
-                        game_over = true;
+                    if (current_status == GAME_CHECKMATE ||
+                        current_status == GAME_STALEMATE) {
+                        app_state = APP_STATE_GAMEOVER;
                     }
                 }
             }
@@ -285,6 +276,8 @@ int main(void)
             selected_x,
             selected_y
         );
+
+        draw_ui_overlay(app_state, current_status, white_turn, renderer);
 
         SDL_RenderPresent(renderer);
     }

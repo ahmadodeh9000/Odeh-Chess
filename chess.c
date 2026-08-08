@@ -624,3 +624,118 @@ bool try_move_piece(chess_t* ch, int xi, int yi, int xf, int yf, bool white_turn
 
     return true;
 }
+
+/*===================================================
+==================UI RENDERING=====================
+====================================================*/
+
+static const char* font_5x5[26][5] = {
+    {" ### ", "#   #", "#####", "#   #", "#   #"}, /* A */
+    {"#### ", "#   #", "#### ", "#   #", "#### "}, /* B */
+    {" ####", "#    ", "#    ", "#    ", " ####"}, /* C */
+    {"#### ", "#   #", "#   #", "#   #", "#### "}, /* D */
+    {"#####", "#    ", "#### ", "#    ", "#####"}, /* E */
+    {"#####", "#    ", "#### ", "#    ", "#    "}, /* F */
+    {" ####", "#    ", "# ###", "#   #", " ####"}, /* G */
+    {"#   #", "#   #", "#####", "#   #", "#   #"}, /* H */
+    {" ### ", "  #  ", "  #  ", "  #  ", " ### "}, /* I */
+    {"    #", "    #", "    #", "#   #", " ### "}, /* J */
+    {"#   #", "#  # ", "###  ", "#  # ", "#   #"}, /* K */
+    {"#    ", "#    ", "#    ", "#    ", "#####"}, /* L */
+    {"#   #", "## ##", "# # #", "#   #", "#   #"}, /* M */
+    {"#   #", "##  #", "# # #", "#  ##", "#   #"}, /* N */
+    {" ### ", "#   #", "#   #", "#   #", " ### "}, /* O */
+    {"#### ", "#   #", "#### ", "#    ", "#    "}, /* P */
+    {" ### ", "#   #", "#   #", "#  ##", " ####"}, /* Q */
+    {"#### ", "#   #", "#### ", "#  # ", "#   #"}, /* R */
+    {" ####", "#    ", " ### ", "    #", "#### "}, /* S */
+    {"#####", "  #  ", "  #  ", "  #  ", "  #  "}, /* T */
+    {"#   #", "#   #", "#   #", "#   #", " ### "}, /* U */
+    {"#   #", "#   #", "#   #", " # # ", "  #  "}, /* V */
+    {"#   #", "#   #", "# # #", "## ##", "#   #"}, /* W */
+    {"#   #", " # # ", "  #  ", " # # ", "#   #"}, /* X */
+    {"#   #", " # # ", "  #  ", "  #  ", "  #  "}, /* Y */
+    {"#####", "   # ", "  #  ", " #   ", "#####"}  /* Z */
+};
+
+static const char* font_punct_5x5[2][5] = {
+    {"  #  ", "  #  ", "  #  ", "     ", "  #  "}, /* ! */
+    {"     ", "     ", "     ", "     ", "     "}  /* space */
+};
+
+void draw_text(const char* text, int x, int y, int scale, SDL_Renderer* renderer) {
+    int cursor_x = x;
+    for (int i = 0; text[i] != '\0'; ++i) {
+        char c = toupper((unsigned char)text[i]);
+        const char** glyph = NULL;
+        
+        if (c >= 'A' && c <= 'Z') {
+            glyph = (const char**)font_5x5[c - 'A'];
+        } else if (c == '!') {
+            glyph = (const char**)font_punct_5x5[0];
+        } else if (c == ' ') {
+            glyph = (const char**)font_punct_5x5[1];
+        } else {
+            glyph = (const char**)font_punct_5x5[1]; /* fallback space */
+        }
+        
+        if (glyph) {
+            for (int r = 0; r < 5; ++r) {
+                for (int c_idx = 0; c_idx < 5; ++c_idx) {
+                    if (glyph[r][c_idx] == '#') {
+                        SDL_Rect rect = {cursor_x + c_idx * scale, y + r * scale, scale, scale};
+                        SDL_RenderFillRect(renderer, &rect);
+                    }
+                }
+            }
+        }
+        cursor_x += 6 * scale; /* 5px width + 1px spacing */
+    }
+}
+
+void draw_ui_overlay(app_state_t state, game_status_t game_status, bool white_turn, SDL_Renderer* renderer) {
+    if (state == APP_STATE_PLAY && game_status != GAME_CHECK) return;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    
+    if (state == APP_STATE_MENU || state == APP_STATE_PAUSE || state == APP_STATE_GAMEOVER) {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180);
+        SDL_Rect overlay = {0, 0, CHESS_GAME_WIDTH, CHESS_GAME_HEIGHT};
+        SDL_RenderFillRect(renderer, &overlay);
+    }
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+    if (state == APP_STATE_MENU) {
+        draw_text("AHMAD CHESS", 65, 120, 4, renderer);
+        draw_text("CLICK TO START", 65, 220, 2, renderer);
+    } 
+    else if (state == APP_STATE_PAUSE) {
+        draw_text("PAUSED", 128, 150, 4, renderer);
+        draw_text("ESC TO RESUME", 95, 220, 2, renderer);
+    }
+    else if (state == APP_STATE_GAMEOVER) {
+        if (game_status == GAME_CHECKMATE) {
+            SDL_SetRenderDrawColor(renderer, 255, 50, 50, 255);
+            draw_text("CHECKMATE!", 80, 100, 4, renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            if (white_turn) {
+                draw_text("BLACK WINS", 110, 150, 3, renderer);
+            } else {
+                draw_text("WHITE WINS", 110, 150, 3, renderer);
+            }
+        } else {
+            SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
+            draw_text("STALEMATE", 90, 100, 4, renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            draw_text("DRAW", 150, 150, 3, renderer);
+        }
+        draw_text("CLICK TO RESTART", 55, 250, 2, renderer);
+    }
+    else if (state == APP_STATE_PLAY && game_status == GAME_CHECK) {
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        draw_text("CHECK!", 160, 10, 2, renderer);
+    }
+    
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
