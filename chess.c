@@ -208,7 +208,7 @@ static void draw_pieces(chess_t* ch, SDL_Renderer* renderer) {
             }
 
             else if (islower((unsigned char)ch->board[i][j])) {
-                SDL_SetRenderDrawColor(renderer,0xFF,0xFF,0xFF,0XFF);
+                SDL_SetRenderDrawColor(renderer,0xC0,0xC0,0xC0,0XFF);
 
                 if (ch->board[i][j] == 'r') {
                     draw_piece(rock_piece,(j * tile) + (tile / 4), (i * tile)+ (tile / 4),renderer);
