@@ -2,7 +2,22 @@
 #define COMMON_H
 
 /*  headers  */
-#include <SDL2/SDL.h>
+
+// checks if SDL2 is installed inside the system !
+#if defined(__has_include)
+	#if __has_include(<SDL2/SDL.h>)
+		#include <SDL2/SDL.h>	
+		#define SDL_AVAILABLE 1
+	#elif __has_include(<SDL.h>)
+		#include <SDL.h>	
+		#define SDL_AVAILABLE 1
+	#else 	
+		#define SDL_AVAILABLE 0
+	#endif
+#else
+	#define SDL_AVAILABLE 0
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
